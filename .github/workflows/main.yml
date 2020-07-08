@@ -31,15 +31,15 @@ jobs:
         conda list
         python --version
 
+    - name: Test onnx2onnx.py
+      shell: bash -l {0}
+      run: python optimizer_scripts/onnx2onnx.py etc/mnasnet.onnx
+
     - name: Test pytorch2onnx.py
       shell: bash -l {0}
       run: |
         python optimizer_scripts/pytorch2onnx.py etc/mnasnet.onnx etc/mnasnet_opt.onnx
         python optimizer_scripts/pytorch2onnx.py etc/resnet34.pth 3 224 224 etc/resnet34.onnx
-
-    - name: Test onnx2onnx.py
-      shell: bash -l {0}
-      run: python optimizer_scripts/onnx2onnx.py etc/mnasnet.onnx
 
     - name: Test tensorflow2onnx.py
       shell: bash -l {0}
