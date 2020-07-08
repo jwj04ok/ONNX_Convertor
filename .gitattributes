@@ -1,0 +1,6 @@
+etc/mnasnet.onnx filter=lfs diff=lfs merge=lfs -text
+etc/mobilenet_v2_224.cut.onnx filter=lfs diff=lfs merge=lfs -text
+etc/mobilenet_v2_224.onnx filter=lfs diff=lfs merge=lfs -text
+etc/mnist.pb filter=lfs diff=lfs merge=lfs -text
+etc/vdsr_41_20layer_1.pb filter=lfs diff=lfs merge=lfs -text
+etc/resnet34.pth filter=lfs diff=lfs merge=lfs -text

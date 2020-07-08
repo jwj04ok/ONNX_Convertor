@@ -1,9 +1,9 @@
 name: test
 channels:
+  - defaults
   - conda-forge
   - intel
   - pytorch
-  - defaults
 dependencies:
   - caffe=1.0=py37hbab4207_5
   - pytorch=1.2.0

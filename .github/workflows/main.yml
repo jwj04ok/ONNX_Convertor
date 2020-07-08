@@ -23,7 +23,6 @@ jobs:
       with:
         environment-file: etc/environment.yml
 
-    # Runs a set of commands using the runners shell
     - name: Check environment
       shell: bash -l {0}
       run: |
@@ -31,4 +30,28 @@ jobs:
         conda info
         conda list
         python --version
-        pip list
+
+    - name: Test pytorch2onnx.py
+      shell: bash -l {0}
+      run: |
+        python optimizer_scripts/pytorch2onnx.py etc/mnasnet.onnx etc/mnasnet_opt.onnx
+        python optimizer_scripts/pytorch2onnx.py etc/resnet34.pth 3 224 224 etc/resnet34.onnx
+
+    - name: Test onnx2onnx.py
+      shell: bash -l {0}
+      run: python optimizer_scripts/onnx2onnx.py etc/mnasnet.onnx
+
+    - name: Test tensorflow2onnx.py
+      shell: bash -l {0}
+      run: |
+        rm -rf test_result && mkdir test_result
+        python optimizer_scripts/tensorflow2onnx.py etc/mnist.pb test_result/mnist_opt_test.onnx -t=True
+        python optimizer_scripts/onnx_tester.py etc/mobilenet_v2_224.onnx etc/mobilenet_v2_224.onnx
+        bash etc/test_onnx_tester_on_diffenrences.sh
+        ls test_result
+        python optimizer_scripts/test_models_opt.py test_result/ .onnx _opt_test.onnx stats.csv -p=Y
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: test-artifacts
+        path: stats.csv
