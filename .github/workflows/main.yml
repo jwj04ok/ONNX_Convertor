@@ -27,6 +27,9 @@ jobs:
         sudo make install
         sudo ldconfig
 
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+
     - name: Setup Miniconda
       uses: goanpeca/setup-miniconda@v1.6.0
       with:
@@ -39,9 +42,6 @@ jobs:
         conda info
         conda list
         python --version
-
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - uses: actions/checkout@v2
 
     - name: Test onnx2onnx.py
       shell: bash -l {0}
