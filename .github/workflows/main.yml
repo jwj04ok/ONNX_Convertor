@@ -16,13 +16,12 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
+
     - name: Setup Miniconda
       uses: goanpeca/setup-miniconda@v1.6.0
       with:
-        auto-update-conda: true
-        python-version: 3.7
-
-    - uses: actions/checkout@v2
+        environment-file: etc/environment.yml
 
     - name: Run a one-line script
       run: echo Hello, world!
@@ -35,4 +34,3 @@ jobs:
         ls -al
         python --version
         pip list
-        
