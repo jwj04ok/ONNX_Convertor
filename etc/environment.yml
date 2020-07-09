@@ -9,9 +9,10 @@ dependencies:
   - pytorch=1.2.0
   - torchvision=0.4.0
   - pybind11
+  - protobuf=3.5.1
+  - numpy
   - pip:
     - keras==2.2.4
-    - numpy==1.19.0
     - tensorflow==1.15.3
     - tf2onnx==1.6.2
     - onnx==1.4.1
