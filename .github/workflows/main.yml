@@ -16,16 +16,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - name: Setup system environment
-      run: |
-        sudo apt-get install -y autoconf automake libtool curl make g++ unzip pkg-config libjsoncpp-dev
-        wget https://github.com/protocolbuffers/protobuf/releases/download/v3.5.1/protobuf-cpp-3.5.1.tar.gz
-        tar -xzf protobuf-cpp-3.5.1.tar.gz
-        cd protobuf-3.5.1
-        ./autogen.sh
-        ./configure
-        make -j12
-        sudo make install
-        sudo ldconfig
+      run: sudo apt-get install -y autoconf automake libtool curl make g++ unzip pkg-config libjsoncpp-dev protobuf-compiler libprotoc-dev
 
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
