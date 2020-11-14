@@ -48,7 +48,9 @@ def preprocess(model_proto, disable_fuse_bn=False):
     - fuse_pad_into_conv
 
     """
+    other.add_name_to_node(model_proto.graph)
     eliminating.eliminate_empty_value_infos(model_proto.graph)
+    fusing.fuse_slice_concat_into_conv(model_proto.graph)
     m = onnx.utils.polish_model(model_proto)
     passes = ['extract_constant_to_initializer',
               'eliminate_nop_dropout',
@@ -210,5 +212,6 @@ def postprocess(m):
     replacing.replace_mul_to_bn(m.graph)
 
     other.add_output_to_value_info(m.graph)
+    eliminating.eliminate_duplicate_value_info(m.graph)
     m.producer_name = 'kneron_formatter'
     return m

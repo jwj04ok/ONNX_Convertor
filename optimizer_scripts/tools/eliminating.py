@@ -531,3 +531,35 @@ def eliminate_empty_value_infos(g):
             to_remove.append(value_info)
     for value_info in to_remove:
         g.value_info.remove(value_info)
+
+def eliminate_duplicate_value_info(g):
+    # value info
+    existed_value = set()
+    to_remove = list()
+    for value in g.value_info:
+        if value.name in existed_value:
+            to_remove.append(value)
+        else:
+            existed_value.add(value.name)
+    for value in to_remove:
+        g.value_info.remove(value)
+    # input
+    to_remove.clear()
+    existed_value.clear()
+    for value in g.input:
+        if value.name in existed_value:
+            to_remove.append(value)
+        else:
+            existed_value.add(value.name)
+    for value in to_remove:
+        g.input.remove(value)
+    # output
+    to_remove.clear()
+    existed_value.clear()
+    for value in g.output:
+        if value.name in existed_value:
+            to_remove.append(value)
+        else:
+            existed_value.add(value.name)
+    for value in to_remove:
+        g.output.remove(value)

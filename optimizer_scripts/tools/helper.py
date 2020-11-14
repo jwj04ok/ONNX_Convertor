@@ -73,6 +73,19 @@ def find_input_by_name(g, name):
             return i
     return None
 
+def find_initializer_by_name(g, name):
+    """
+    Find an initializer in the graph by name
+
+    :param g: the onnx graph\\
+    :param name: the target name\\
+    :returns: the input find by name
+    """
+    for i in g.initializer:
+        if i.name == name:
+            return i
+    return None
+
 def list_to_constant(name, shape, data, data_type=None):
     """Generate a constant node using the given infomation.
 

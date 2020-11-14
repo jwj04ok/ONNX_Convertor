@@ -869,3 +869,87 @@ def fuse_consecutive_reducemean(g):
         g.node.remove(node)
 
     topological_sort(g)
+
+
+def fuse_slice_concat_into_conv(g):
+    # Find structure
+    for node in g.node:
+        # Find the concat node
+        if node.op_type != 'Concat' or len(node.input) != 4:
+            continue
+        concat_node = node
+        # Find 4 inputs
+        slice_nodes = [helper.find_node_by_output_name(g, concat_node.input[i]) for i in range(4)]
+        # Check type of four input
+        input_id = None
+        for i in range(4):
+            slice_node = slice_nodes[i]
+            if slice_node is None and input_id is None:
+                input_id = i
+            elif slice_node is None:
+                continue
+            elif slice_node.op_type != 'Slice':
+                continue
+        if input_id is None:
+            continue
+        # Check the shape
+        input_value = helper.find_input_by_name(g, concat_node.input[input_id])
+        input_shape = helper.get_shape_from_value_info(input_value)
+        next_nodes = helper.find_nodes_by_input_name(g, concat_node.output[0])
+        if len(next_nodes) != 1 or next_nodes[0].op_type != 'Conv':
+            continue
+        next_conv_weight_node = helper.find_node_by_output_name(g, next_nodes[0].input[1])
+        if next_conv_weight_node is None:
+            weight_initializer = helper.find_initializer_by_name(g, next_nodes[0].input[1])
+            weight_channel_number = weight_initializer.dims[1]
+        else:
+            weight_channel_number = helper.constant_to_list(next_conv_weight_node)[0][0]
+        if weight_channel_number != input_shape[1] * 4:
+            continue
+        # Check the sequence and construct weight
+        weight_np = np.zeros((weight_channel_number * input_shape[1], 2, 2), dtype=np.float32)
+        i = 0
+        for slice_node in slice_nodes:
+            if slice_node is None:
+                # (0, 0)
+                for _ in range(input_shape[1]):
+                    weight_np[i, 0, 0] = 1
+                    i += 1
+            elif helper.find_node_by_output_name(g, slice_node.input[0]) is not None:
+                # (1, 1)
+                for _ in range(input_shape[1]):
+                    weight_np[i, 1, 1] = 1
+                    i += 1
+            else:
+                axis = helper.get_list_attribute_by_name(slice_node, 'axes', 'int')[0]
+                if axis == 2:
+                    # (1, 0)
+                    for _ in range(input_shape[1]):
+                        weight_np[i, 1, 0] = 1
+                        i += 1
+                else:
+                    # (0, 1)
+                    for _ in range(input_shape[1]):
+                        weight_np[i, 0, 1] = 1
+                        i += 1
+        weight_np = np.reshape(weight_np, (weight_channel_number, input_shape[1], 2, 2))
+        # Create node
+        weight_node = helper.numpy_to_constant(concat_node.name + "_weight", weight_np)
+        conv_node = onnx.helper.make_node(
+            "Conv",
+            [input_value.name, weight_node.name],
+            concat_node.output,
+            name=concat_node.name,
+            dilations=[1, 1],
+            group=1,
+            kernel_shape=[2, 2],
+            pads=[0, 0, 0, 0],
+            strides=[2, 2]
+        )
+        g.node.extend([weight_node, conv_node])
+        # Delete nodes
+        g.node.remove(concat_node)
+        for slice_node in slice_nodes:
+            if slice_node is not None:
+                g.node.remove(slice_node)
+    topological_sort(g)
