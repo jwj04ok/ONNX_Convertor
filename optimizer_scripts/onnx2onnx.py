@@ -10,7 +10,7 @@ from tools import replacing
 from tools import other
 from tools import special
 from tools import combo
-from tools.soft_transpose import soft_transpose
+from tools.soft_rotate import soft_rotate
 # from tools import temp
 
 # Main process
@@ -28,8 +28,8 @@ parser.add_argument('-t', '--eliminate-tail-unsupported', dest='eliminate_tail',
                     help='whether remove the last unsupported node for hardware')
 parser.add_argument('--no-bn-fusion', dest='disable_fuse_bn', action='store_true', default=False,
                     help="set if you have met errors which related to inferenced shape mismatch. This option will prevent fusing BatchNormailization into Conv.")
-parser.add_argument('--soft-transpose', dest='soft_transpose', action='store_true', default=False,
-                    help="set if you want to transpose all the weights in order to serve a transposed input.")
+parser.add_argument('--soft-rotate', nargs='?', dest='soft_rotate', type=int, default=0, const=90,
+                    help="set if you want to rotate all the weights in order to serve a transposed input. It can be followed by 90 or 270 with indicate the angle clockwise. By default, it is 90.")
 
 args = parser.parse_args()
 
@@ -80,7 +80,7 @@ if args.eliminate_tail:
 # Postprocessing
 m = combo.postprocess(m)
 
-if args.soft_transpose:
-    soft_transpose(m.graph)
+if args.soft_rotate != 0:
+    soft_rotate(m.graph, args.soft_rotate)
 
 onnx.save(m, outfile)

@@ -14,19 +14,26 @@ def value_info_transpose(g, value_info):
     value_info.type.tensor_type.shape.dim[2].dim_value = value_info.type.tensor_type.shape.dim[3].dim_value
     value_info.type.tensor_type.shape.dim[3].dim_value = temp
 
-def conv_weight_transpose(g, const_node):
+def conv_weight_rotate(g, const_node, counter_clock=False):
     # Transpose
     old_weight_np = helper.constant_to_numpy(const_node)
-    new_weight_np = np.transpose(old_weight_np, (0, 1, 3, 2))
+    if counter_clock:
+        new_weight_np = np.rot90(old_weight_np, 3, (2, 3))
+    else:
+        new_weight_np = np.rot90(old_weight_np, 1, (2, 3))
     # Create new node
     new_node = helper.numpy_to_constant(const_node.output[0], new_weight_np)
     value_info_transpose(g, helper.find_value_by_name(g, const_node.output[0]))
     g.node.remove(const_node)
     g.node.extend([new_node])
 
-def soft_transpose(g):
+def soft_transpose(g, degree):
     '''Transpose the input without adding any Transpose layers.
     '''
+    # Check argument
+    if degree != 90 and degree != 270:
+        print("Currently, rotation only suppot 90 or 270 degree clockwise.")
+        quit(1)
     # Transpose input
     for input_value in g.input:
         value_info_transpose(g, input_value)
@@ -47,19 +54,25 @@ def soft_transpose(g):
                 kernel_shape.ints[1] = temp
             pads = helper.get_attribute_by_name(node, 'pads')
             if pads != None:
-                temp = pads.ints[0]
-                pads.ints[0] = pads.ints[1]
-                pads.ints[1] = temp
-                temp = pads.ints[2]
-                pads.ints[2] = pads.ints[3]
-                pads.ints[3] = temp
+                if degree == 90:
+                    temp = pads.ints[0]
+                    pads.ints[0] = pads.ints[3]
+                    pads.ints[3] = pads.ints[2]
+                    pads.ints[2] = pads.ints[1]
+                    pads.ints[1] = temp
+                elif degree == 270:
+                    temp = pads.ints[0]
+                    pads.ints[0] = pads.ints[1]
+                    pads.ints[1] = pads.ints[2]
+                    pads.ints[2] = pads.ints[3]
+                    pads.ints[3] = temp
             strides = helper.get_attribute_by_name(node, 'strides')
             if strides != None:
                 temp = strides.ints[0]
                 strides.ints[0] = strides.ints[1]
                 strides.ints[1] = temp
             # Transpose weight
-            conv_weight_transpose(g, helper.find_node_by_output_name(g, node.input[1]))
+            conv_weight_rotate(g, helper.find_node_by_output_name(g, node.input[1]), degree == 270)
             value_info_transpose(g, helper.find_value_by_name(g, node.output[0]))
         elif node.op_type == 'ConvTranspose':
             # Transpose attributes
@@ -85,32 +98,42 @@ def soft_transpose(g):
                 output_shape.ints[3] = temp
             pads = helper.get_attribute_by_name(node, 'pads')
             if pads != None:
-                temp = pads.ints[0]
-                pads.ints[0] = pads.ints[1]
-                pads.ints[1] = temp
-                temp = pads.ints[2]
-                pads.ints[2] = pads.ints[3]
-                pads.ints[3] = temp
+                if degree == 90:
+                    temp = pads.ints[0]
+                    pads.ints[0] = pads.ints[3]
+                    pads.ints[3] = pads.ints[2]
+                    pads.ints[2] = pads.ints[1]
+                    pads.ints[1] = temp
+                elif degree == 270:
+                    temp = pads.ints[0]
+                    pads.ints[0] = pads.ints[1]
+                    pads.ints[1] = pads.ints[2]
+                    pads.ints[2] = pads.ints[3]
+                    pads.ints[3] = temp
             strides = helper.get_attribute_by_name(node, 'strides')
             if strides != None:
                 temp = strides.ints[0]
                 strides.ints[0] = strides.ints[1]
                 strides.ints[1] = temp
             # Transpose weight
-            conv_weight_transpose(g, helper.find_node_by_output_name(g, node.input[1]))
+            conv_weight_rotate(g, helper.find_node_by_output_name(g, node.input[1]), degree == 270)
             value_info_transpose(g, helper.find_value_by_name(g, node.output[0]))
         elif node.op_type == 'Pad':
             # Transpose attributes
             pads = helper.get_attribute_by_name(node, 'pads')
-            if pads != None:
-                temp = pads.ints[2]
+            if degree == 90:
+                temp = pads.ints[0]
+                pads.ints[0] = pads.ints[3]
+                pads.ints[3] = pads.ints[2]
+                pads.ints[2] = pads.ints[1]
+                pads.ints[1] = temp
+            elif degree == 270:
+                temp = pads.ints[0]
+                pads.ints[0] = pads.ints[1]
+                pads.ints[1] = pads.ints[2]
                 pads.ints[2] = pads.ints[3]
                 pads.ints[3] = temp
-                temp = pads.ints[6]
-                pads.ints[6] = pads.ints[7]
-                pads.ints[7] = temp
             # Transpose weight
-            conv_weight_transpose(g, helper.find_node_by_output_name(g, node.input[1]))
             value_info_transpose(g, helper.find_value_by_name(g, node.output[0]))
         elif node.op_type == 'Flatten':
             shape = helper.get_shape_from_value_info(helper.find_value_by_name(g, node.input[0]))
@@ -128,7 +151,10 @@ def soft_transpose(g):
             # Transpose
             old_weight_np = helper.constant_to_numpy(const_node)
             old_weight_np = np.reshape(old_weight_np, (last_shape[0], last_shape[1], last_shape[2], last_shape[3], -1))
-            new_weight_np = np.transpose(old_weight_np, (0, 1, 3, 2, 4))
+            if degree == 90:
+                new_weight_np = np.transpose(old_weight_np, 1, (2, 3))
+            else:
+                new_weight_np = np.transpose(old_weight_np, 3, (2, 3))
             new_weight_np = np.reshape(new_weight_np, (-1, new_weight_np.shape[-1]))
             # Create new node
             new_node = helper.numpy_to_constant(const_node.output[0], new_weight_np)
@@ -143,12 +169,18 @@ def soft_transpose(g):
                 kernel_shape.ints[1] = temp
             pads = helper.get_attribute_by_name(node, 'pads')
             if pads != None:
-                temp = pads.ints[0]
-                pads.ints[0] = pads.ints[1]
-                pads.ints[1] = temp
-                temp = pads.ints[2]
-                pads.ints[2] = pads.ints[3]
-                pads.ints[3] = temp
+                if degree == 90:
+                    temp = pads.ints[0]
+                    pads.ints[0] = pads.ints[3]
+                    pads.ints[3] = pads.ints[2]
+                    pads.ints[2] = pads.ints[1]
+                    pads.ints[1] = temp
+                elif degree == 270:
+                    temp = pads.ints[0]
+                    pads.ints[0] = pads.ints[1]
+                    pads.ints[1] = pads.ints[2]
+                    pads.ints[2] = pads.ints[3]
+                    pads.ints[3] = temp
             strides = helper.get_attribute_by_name(node, 'strides')
             if strides != None:
                 temp = strides.ints[0]
@@ -163,12 +195,18 @@ def soft_transpose(g):
                 kernel_shape.ints[1] = temp
             pads = helper.get_attribute_by_name(node, 'pads')
             if pads != None:
-                temp = pads.ints[0]
-                pads.ints[0] = pads.ints[1]
-                pads.ints[1] = temp
-                temp = pads.ints[2]
-                pads.ints[2] = pads.ints[3]
-                pads.ints[3] = temp
+                if degree == 90:
+                    temp = pads.ints[0]
+                    pads.ints[0] = pads.ints[3]
+                    pads.ints[3] = pads.ints[2]
+                    pads.ints[2] = pads.ints[1]
+                    pads.ints[1] = temp
+                elif degree == 270:
+                    temp = pads.ints[0]
+                    pads.ints[0] = pads.ints[1]
+                    pads.ints[1] = pads.ints[2]
+                    pads.ints[2] = pads.ints[3]
+                    pads.ints[3] = temp
             strides = helper.get_attribute_by_name(node, 'strides')
             if strides != None:
                 temp = strides.ints[0]
