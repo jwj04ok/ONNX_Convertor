@@ -23,13 +23,13 @@ def conv_weight_rotate(g, const_node, counter_clock=False):
         new_weight_np = np.rot90(old_weight_np, 1, (2, 3))
     # Create new node
     new_node = helper.numpy_to_constant(const_node.output[0], new_weight_np)
-    value_info_transpose(g, helper.find_value_by_name(g, const_node.output[0]))
     g.node.remove(const_node)
     g.node.extend([new_node])
 
-def soft_transpose(g, degree):
+def soft_rotate(m, degree):
     '''Transpose the input without adding any Transpose layers.
     '''
+    g = m.graph
     # Check argument
     if degree != 90 and degree != 270:
         print("Currently, rotation only suppot 90 or 270 degree clockwise.")
@@ -73,7 +73,6 @@ def soft_transpose(g, degree):
                 strides.ints[1] = temp
             # Transpose weight
             conv_weight_rotate(g, helper.find_node_by_output_name(g, node.input[1]), degree == 270)
-            value_info_transpose(g, helper.find_value_by_name(g, node.output[0]))
         elif node.op_type == 'ConvTranspose':
             # Transpose attributes
             dilations = helper.get_attribute_by_name(node, 'dilations')
@@ -115,9 +114,7 @@ def soft_transpose(g, degree):
                 temp = strides.ints[0]
                 strides.ints[0] = strides.ints[1]
                 strides.ints[1] = temp
-            # Transpose weight
             conv_weight_rotate(g, helper.find_node_by_output_name(g, node.input[1]), degree == 270)
-            value_info_transpose(g, helper.find_value_by_name(g, node.output[0]))
         elif node.op_type == 'Pad':
             # Transpose attributes
             pads = helper.get_attribute_by_name(node, 'pads')
@@ -134,7 +131,6 @@ def soft_transpose(g, degree):
                 pads.ints[2] = pads.ints[3]
                 pads.ints[3] = temp
             # Transpose weight
-            value_info_transpose(g, helper.find_value_by_name(g, node.output[0]))
         elif node.op_type == 'Flatten':
             shape = helper.get_shape_from_value_info(helper.find_value_by_name(g, node.input[0]))
             if len(shape) == 4:
@@ -221,3 +217,6 @@ def soft_transpose(g, degree):
         elif node.op_type == 'Unsqueeze':
             logging.warning("Unsqueeze may cause problems in soft tranpose.")
     other.topological_sort(g)
+    while len(g.value_info) != 0:
+        g.value_info.pop()
+    return modhelper.inference_shapes(m)

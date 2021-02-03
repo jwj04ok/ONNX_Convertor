@@ -8,9 +8,9 @@ from tools import helper
 onnx2np_dtype = {0: 'float', 1: 'float32', 2: 'uint8', 3: 'int8', 4: 'uint16', 5: 'int16', 6: 'int32', 7: 'int64', 8: 'str', 9: 'bool', 10: 'float16', 11: 'double', 12: 'uint32', 13: 'uint64', 14: 'complex64', 15: 'complex128', 16: 'float'}
 
 
-def onnx_model_results(path_a, path_b, total_times=10):
+def onnx_model_results(path_a, path_b, total_times=10, rotate_b=0):
     """ using onnxruntime to inference two onnx models' ouputs
-    
+
     :onnx model paths: two model paths
     :total_times: inference times, default to be 10
     :returns: inference results of two models
@@ -84,10 +84,13 @@ def onnx_model_results(path_a, path_b, total_times=10):
     results_a = [[] for i in range(len(outputs_a))]
     results_b = [[] for i in range(len(outputs_b))]
     while times < total_times:
-        # initialize inputs by random data, default to be uniform 
+        # initialize inputs by random data, default to be uniform
         data = np.random.random(size_a)
         input_a = np.reshape(data, shape_a).astype(input_data_type_a)
-        input_b = np.reshape(data, shape_b).astype(input_data_type_b)
+        if rotate_b == 0:
+            input_b = np.reshape(data, shape_b).astype(input_data_type_b)
+        else:
+            input_b = np.rot90(input_a, (rotate_b//90), (2, 3))
 
         input_dict_a = {}
         input_dict_b = {}
@@ -114,10 +117,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Compare two ONNX models to check if they have the same output.")
     parser.add_argument('in_file_a', help='input ONNX file a')
     parser.add_argument('in_file_b', help='input ONNX file b')
+    parser.add_argument('-rb', type=int, default=0, help='Rotate B with given degrees clockwise')
+    parser.add_argument('-c', type=int, default=1, help='Repeat count.')
 
     args = parser.parse_args()
 
-    results_a, results_b = onnx_model_results(args.in_file_a, args.in_file_b, total_times=10)
+    results_a, results_b = onnx_model_results(args.in_file_a, args.in_file_b, total_times=args.c, rotate_b=args.rb)
     ra_flat = helper.flatten_with_depth(results_a, 0)
     rb_flat = helper.flatten_with_depth(results_b, 0)
     shape_a = [item[1] for item in ra_flat]

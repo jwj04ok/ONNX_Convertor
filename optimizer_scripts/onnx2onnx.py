@@ -61,9 +61,6 @@ if args.bn_on_skip:
 elif args.bn_before_add:
     other.add_bn_before_add(m.graph)
     other.add_bn_before_activation(m.graph)
-# Split deconv
-if args.split_convtranspose:
-    other.split_ConvTranspose(m)
 
 # My optimization
 m = combo.common_optimization(m)
@@ -81,6 +78,6 @@ if args.eliminate_tail:
 m = combo.postprocess(m)
 
 if args.soft_rotate != 0:
-    soft_rotate(m.graph, args.soft_rotate)
+    m = soft_rotate(m, args.soft_rotate)
 
 onnx.save(m, outfile)
