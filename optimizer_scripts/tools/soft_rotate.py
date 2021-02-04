@@ -18,9 +18,9 @@ def conv_weight_rotate(g, const_node, counter_clock=False):
     # Transpose
     old_weight_np = helper.constant_to_numpy(const_node)
     if counter_clock:
-        new_weight_np = np.rot90(old_weight_np, 3, (2, 3))
+        new_weight_np = np.rot90(old_weight_np, 3, (3, 2))
     else:
-        new_weight_np = np.rot90(old_weight_np, 1, (2, 3))
+        new_weight_np = np.rot90(old_weight_np, 1, (3, 2))
     # Create new node
     new_node = helper.numpy_to_constant(const_node.output[0], new_weight_np)
     g.node.remove(const_node)
@@ -37,9 +37,11 @@ def soft_rotate(m, degree):
     # Transpose input
     for input_value in g.input:
         value_info_transpose(g, input_value)
-    last_shape = []
+    # Transpose output
+    for output_value in g.output:
+        value_info_transpose(g, output_value)
+    last_shape = None
     for node in g.node:
-        last_shape = None
         if node.op_type == 'Conv':
             # Transpose attributes
             dilations = helper.get_attribute_by_name(node, 'dilations')
@@ -148,9 +150,9 @@ def soft_rotate(m, degree):
             old_weight_np = helper.constant_to_numpy(const_node)
             old_weight_np = np.reshape(old_weight_np, (last_shape[0], last_shape[1], last_shape[2], last_shape[3], -1))
             if degree == 90:
-                new_weight_np = np.transpose(old_weight_np, 1, (2, 3))
+                new_weight_np = np.rot90(old_weight_np, 1, (3, 2))
             else:
-                new_weight_np = np.transpose(old_weight_np, 3, (2, 3))
+                new_weight_np = np.rot90(old_weight_np, 3, (3, 2))
             new_weight_np = np.reshape(new_weight_np, (-1, new_weight_np.shape[-1]))
             # Create new node
             new_node = helper.numpy_to_constant(const_node.output[0], new_weight_np)

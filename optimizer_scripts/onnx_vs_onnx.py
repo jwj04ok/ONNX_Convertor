@@ -27,7 +27,10 @@ def onnx_model_results(path_a, path_b, total_times=10, rotate_b=0):
         out_shape_a, out_shape_b = outputs_a[i].shape, outputs_b[i].shape
         out_shape_a = list(map(lambda x: x if type(x) == type(1) else 1, out_shape_a))
         out_shape_b = list(map(lambda x: x if type(x) == type(1) else 1, out_shape_b))
-        assert out_shape_a == out_shape_b, 'Output {} has unmatched shapes'.format(i)
+        if rotate_b % 180 == 0 or len(out_shape_a) != 4:
+            assert out_shape_a == out_shape_b, 'Output {} has unmatched shapes'.format(i)
+        else:
+            assert out_shape_a == [out_shape_b[0], out_shape_b[1], out_shape_b[3], out_shape_b[2]], 'Output {} has unmatched shapes'.format(i)
 
 
     # load onnx graph_a and graph_b, to find the initializer and inputs
@@ -90,7 +93,7 @@ def onnx_model_results(path_a, path_b, total_times=10, rotate_b=0):
         if rotate_b == 0:
             input_b = np.reshape(data, shape_b).astype(input_data_type_b)
         else:
-            input_b = np.rot90(input_a, (rotate_b//90), (2, 3))
+            input_b = np.rot90(input_a, (rotate_b//90), (3, 2))
 
         input_dict_a = {}
         input_dict_b = {}
@@ -107,7 +110,11 @@ def onnx_model_results(path_a, path_b, total_times=10, rotate_b=0):
         rb = session_b.run([], input_dict_b)
         for i in range(len(outputs_a)):
             results_a[i].append(ra[i])
-            results_b[i].append(rb[i])
+            np_rb = np.array(rb[i])
+            if rotate_b == 0 or len(np_rb.shape) != 4:
+                results_b[i].append(rb[i])
+            else:
+                results_b[i].append(np.rot90(np_rb, 4 - (rotate_b//90), (3, 2)).tolist())
         times += 1
 
     return results_a, results_b
