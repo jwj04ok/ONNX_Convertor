@@ -125,7 +125,7 @@ if __name__ == '__main__':
     parser.add_argument('in_file_a', help='input ONNX file a')
     parser.add_argument('in_file_b', help='input ONNX file b')
     parser.add_argument('-rb', type=int, default=0, help='Rotate B with given degrees clockwise')
-    parser.add_argument('-c', type=int, default=1, help='Repeat count.')
+    parser.add_argument('-c', type=int, default=3, help='Repeat count.')
 
     args = parser.parse_args()
 
